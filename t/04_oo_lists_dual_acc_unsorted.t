@@ -2,7 +2,7 @@
 #$Id$
 # 04_oo_lists_dual_acc_unsorted.t
 use strict;
-use Test::More tests => 112;
+use Test::More tests => 109;
 use List::Compare;
 use lib ("./t");
 use Test::ListCompareSpecial qw( :seen :wrap :arrays :results );
@@ -18,7 +18,7 @@ my ($LR, $RL, $eqv, $disj, $return, $vers);
 my (@nonintersection, @shared);
 my ($nonintersection_ref, $shared_ref);
 my ($memb_hash_ref, $memb_arr_ref, @memb_arr);
-my ($unique_all_ref, $complement_all_ref);
+my ($unique_all_ref, $complement_all_ref, @seen);
 my @args;
 
 ### new ###
@@ -435,89 +435,32 @@ ok(0 == scalar(@{$lcu_dj->get_intersection_ref}),
 $disj = $lcu_dj->is_LdisjointR;
 ok($disj, "disjoint correctly determined");
 
-########## Tests for '--unsorted' and '--accelerated' in any order ##########
+########## BELOW:  Tests for '--unsorted' and '--accelerated' options ##########
 
-=pod
+my $lcaun   = List::Compare->new('--unsorted', '-a', \@a0, \@a1);
+ok($lcaun, "Constructor worked with --unsorted and -a options");
 
-Note:  What we can legitimately test here is limited.  The '--unsorted' option
-merely states: "Do not impose any sort order on the results."  Hence, the only
-things we can test are:
+my $lcaun_s  = List::Compare->new('--unsorted', '-a', \@a2, \@a3);
+ok($lcaun_s, "Constructor worked with --unsorted and -a options");
 
-Did the constructor complete successfully?
+my $lcaun_e  = List::Compare->new('--unsorted', '-a', \@a3, \@a4);
+ok($lcaun_e, "Constructor worked with --unsorted and -a options");
 
-Are the contents of the list returned by a method as expected -- regardless of
-order?
+my $lcaccun   = List::Compare->new('--unsorted', '--accelerated', \@a0, \@a1);
+ok($lcaccun, "Constructor worked with --unsorted and --accelerated options");
 
-The '--accelerated' option asserts that if you choose it when appropriate --
-when you're only going to be requesting information on a single set
-relationship -- you will get your results back more quickly.  But that's an
-assertion about speed rather than correctness -- and assertions about
-the speed of a particular method are outside the scope of a Perl test suite
-file like this.  So, as in the case of the '--unsorted' option, the only
-things we can legitimately test are a successful constructor and correct
-contents of the list returned by a method call.
+my $lcaccun_s  = List::Compare->new('--unsorted', '--accelerated', \@a2, \@a3);
+ok($lcaccun_s, "Constructor worked with --unsorted and --accelerated options");
 
-Note further that the documentation makes no claim as how this performance
-improvement is achieved.  That's an implementation detail and not a proper
-subject for testing.
+my $lcaccun_e  = List::Compare->new('--unsorted', '--accelerated', \@a3, \@a4);
+ok($lcaccun_e, "Constructor worked with --unsorted and --accelerated options");
 
-Should we wish to combine the '--unsorted' and '--acclerated' options, we face
-exactly the same limitations.  In this case, the only additional thing to test
-is:  "Does it matter whether I call '--unsorted' first or '--accelerated'
-first?"
+my $lcaccu   = List::Compare->new('-u', '--accelerated', \@a0, \@a1);
+ok($lcaccu, "Constructor worked with -u and --accelerated options");
 
-=cut
+my $lcaccu_s  = List::Compare->new('-u', '--accelerated', \@a2, \@a3);
+ok($lcaccu_s, "Constructor worked with -u and --accelerated options");
 
-my ($lc, %expected_intersection);
-foreach (qw| golfer delta edward baker camera fargo  |) {
-    $expected_intersection{$_}++;
-}
-
-$lc = List::Compare->new('--accelerated', '--unsorted', \@a0, \@a1);
-ok($lc, "new() with --accelerated --unsorted okay");
-is_deeply(
-    { map { $_ => 1 } @{$lc->get_intersection_ref} },
-    \%expected_intersection,
-    "Got intersection"
-);
-
-$lc = List::Compare->new('--unsorted', '--accelerated', \@a0, \@a1);
-ok($lc, "new() with --unsorted --accelerated okay");
-is_deeply(
-    { map { $_ => 1 } @{$lc->get_intersection_ref} },
-    \%expected_intersection,
-    "Got intersection"
-);
-
-$lc = List::Compare->new('-a', '--unsorted', \@a0, \@a1);
-ok($lc, "new() with -a --unsorted okay");
-is_deeply(
-    { map { $_ => 1 } @{$lc->get_intersection_ref} },
-    \%expected_intersection,
-    "Got intersection"
-);
-
-$lc = List::Compare->new('-u', '--accelerated', \@a0, \@a1);
-ok($lc, "new() with -u --accelerated okay");
-is_deeply(
-    { map { $_ => 1 } @{$lc->get_intersection_ref} },
-    \%expected_intersection,
-    "Got intersection"
-);
-
-$lc = List::Compare->new('-a', '-u', \@a0, \@a1);
-ok($lc, "new() with -a -u okay");
-is_deeply(
-    { map { $_ => 1 } @{$lc->get_intersection_ref} },
-    \%expected_intersection,
-    "Got intersection"
-);
-
-$lc = List::Compare->new('-u', '-a', \@a0, \@a1);
-ok($lc, "new() with -u -a okay");
-is_deeply(
-    { map { $_ => 1 } @{$lc->get_intersection_ref} },
-    \%expected_intersection,
-    "Got intersection"
-);
+my $lcaccu_e  = List::Compare->new('-u', '--accelerated', \@a3, \@a4);
+ok($lcaccu_e, "Constructor worked with -u and --accelerated options");
 
