@@ -10,58 +10,69 @@ use List::Compare::Base::_Auxiliary qw(
 
 sub new {
     my $class = shift;
-    my (@args, $unsorted, $accelerated, $argument_error_status, $nextarg, @testargs);
-    if (@_ == 1 and (ref($_[0]) eq 'HASH')) {
+    my (@args, $unsorted, $accelerated);
+    if (@_ == 1) {
         my $argref = shift;
-        die "Need to pass references to 2 or more seen-hashes or \n  to provide a 'lists' key within the single hash being passed by reference"
-            unless exists ${$argref}{'lists'};
-        die "Need to define 'lists' key properly: $!"
-            unless ( ${$argref}{'lists'}
-                 and (ref(${$argref}{'lists'}) eq 'ARRAY') );
-        @args = @{${$argref}{'lists'}};
-        $unsorted = ${$argref}{'unsorted'} ? 1 : '';
-        $accelerated = ${$argref}{'accelerated'} ? 1 : '';
+        if (ref($argref) eq 'HASH') {
+            die "Need to pass references to 2 or more seen-hashes or \n  to provide a 'lists' key within the single hash being passed by reference"
+                unless exists $argref->{lists};
+            my $listsref = $argref->{lists};
+            die "Need to define 'lists' key properly: $!"
+                unless $listsref && ref($listsref) eq 'ARRAY';
+            @args        = @{$listsref};
+            $unsorted    = ${$argref}{unsorted};
+            $accelerated = ${$argref}{accelerated};
+        }
     } else {
-        @args = @_;
-        $unsorted = ($args[0] eq '-u' or $args[0] eq '--unsorted')
-            ? shift(@args) : '';
-        $accelerated = shift(@args)
-            if ($args[0] eq '-a' or $args[0] eq '--accelerated');
+        while (@_) {
+            if ($_[0] eq '-u' or $_[0] eq '--unsorted') {
+                $unsorted = shift;
+            }
+            elsif ($_[0] eq '-a' or $_[0] eq '--accelerated') {
+                $accelerated = shift;
+            }
+            else {
+                last;   # ran out of named options
+            }
+        }
+        @args = @_;    # any remaining must be arrayrefs of hashrefs
     }
-    $argument_error_status = 1;
-    @testargs = @args[1..$#args];
-    if (ref($args[0]) eq 'ARRAY' or ref($args[0]) eq 'HASH') {
-        while (defined ($nextarg = shift(@testargs))) {
-            unless (ref($nextarg) eq ref($args[0])) {
+
+    croak "Must pass at least 2 references to \&new: $!"
+        unless @args >= 2;
+
+    # Make sure the args are either all arrayrefs or all hashrefs:
+    #
+    my $argument_error_status = 1;
+    my $firstref;
+    foreach my $arg (@args) {
+        my $ref = ref $arg;
+        unless ($firstref) {
+            if ($ref eq 'ARRAY' || $ref eq 'HASH') {
+                $firstref = $ref;
+                next;
+            }
+            else {
                 $argument_error_status = 0;
                 last;
             }
         }
-    } else {
-        $argument_error_status = 0;
+        unless ($ref eq $firstref) {
+            $argument_error_status = 0;
+            last;
+        }
     }
     croak "Must pass all array references or all hash references: $!"
         unless $argument_error_status;
 
     # Compose the name of the class
-    if (@args > 2) {
-        if ($accelerated) {
-            $class .= '::Multiple::Accelerated';
-        } else {
-            $class .= '::Multiple';
-        }
-    } elsif (@args == 2) {
-        if ($accelerated) {
-            $class .= '::Accelerated';
-        }
-    } else {
-        croak "Must pass at least 2 references to \&new: $!";
-    }
+    $class .= '::Multiple'    if @args > 2;
+    $class .= '::Accelerated' if $accelerated;
 
     # do necessary calculations and store results in a hash
     # take a reference to that hash
     my $self = bless {}, $class;
-    my $dataref = $self->_init(($unsorted ? 1 : 0), @args);
+    my $dataref = $self->_init($unsorted, @args);
 
     # initialize the object from the prepared values (Damian, p. 98)
     %$self = %$dataref;
